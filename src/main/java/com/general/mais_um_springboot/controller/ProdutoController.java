@@ -1,7 +1,10 @@
 package com.general.mais_um_springboot.controller;
 
+import com.general.mais_um_springboot.exceptions.RecursoNaoEncontradoException;
 import com.general.mais_um_springboot.model.Produto;
 import com.general.mais_um_springboot.service.ProdutoService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,10 +27,12 @@ public class ProdutoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Produto> buscarProdutosPorId(@PathVariable Long id) {
-        return produtoService.listaPorId(id)
-                .map(ResponseEntity::ok) // Acho que é pra evitar alguma exception, sla
-                .orElse(ResponseEntity.notFound().build());
+    // <?> Uma classe generica, pq no try pode retornar um produto ou no catch pode retornar StatusCode
+    // O try/catch pode ser retirado pq criamos as exceptions personalizadas.
+    // Com isso, o próprio Spring gerencia.
+    public ResponseEntity<?> buscarProdutosPorId(@PathVariable Long id) {
+            Produto produto = produtoService.listarPorId(id);
+            return ResponseEntity.ok(produto);
     }
 
     @PostMapping
@@ -36,8 +41,12 @@ public class ProdutoController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletarProduto(@PathVariable Long id) {
-        produtoService.deletarProduto(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deletarProduto(@PathVariable Long id) {
+        try {
+            produtoService.deletarProduto(id);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (RecursoNaoEncontradoException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 }
